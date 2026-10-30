@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de administración de servidores dinámicos - UDEC</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+  <!-- BARRA DE NAVEGACIÓN Y CONTROL SUPERIOR -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <div class="brand-badge">UDEC &bull; CADI</div>
+      <div class="brand-titles">
+        <h1>Panel de administración de servidores dinámicos</h1>
+        <p class="brand-subtitle">Supervisión de clúster, balanceo de carga y métricas de tráfico en tiempo real</p>
+      </div>
+    </div>
+
+    <!-- Barra de conexión con la API -->
+    <div class="nav-api-bar">
+      <div class="api-field">
+        <span class="api-tag">API:</span>
+        <input type="text" id="apiUrlInput" value="http://localhost:3000" spellcheck="false" title="Dirección base de la API">
+        <button id="btnGuardarApi" class="btn-ctrl">Conectar</button>
+      </div>
+      <div id="apiStatusText" class="connection-pill offline">Desconectado</div>
+    </div>
+  </header>
+
+  <main class="dashboard-wrapper">
+
+    <!-- 2. RESUMEN DEL SISTEMA (CINTA DE TELEMETRÍA / KPIs) -->
+    <section class="telemetry-ribbon">
+      <div class="ribbon-header">
+        <span class="ribbon-title">Resumen del sistema</span>
+        <span class="ribbon-desc">Métricas globales sincronizadas con el balanceador</span>
+      </div>
+      <div class="ribbon-stats">
+        <div class="stat-cell">
+          <div class="stat-number" id="kpiTotalSolicitudes">0</div>
+          <div class="stat-desc">Solicitudes Atendidas</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-number" id="kpiTotalServidores">0</div>
+          <div class="stat-desc">Servidores Configurados</div>
+        </div>
+        <div class="stat-cell is-online">
+          <div class="stat-number" id="kpiServidoresActivos">0</div>
+          <div class="stat-desc">Servidores Activos</div>
+        </div>
+        <div class="stat-cell is-offline">
+          <div class="stat-number" id="kpiServidoresInactivos">0</div>
+          <div class="stat-desc">Servidores Inactivos</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ÁREA DE TRABAJO PRINCIPAL: DISTRIBUCIÓN EN 2 PANELES -->
+    <div class="workspace-grid">
+
+      <!-- ==============================================
+           PANEL 1: CONTROL DE CARGA Y ESTADÍSTICAS
+           ============================================== -->
+      <div class="column-panel">
+
+        <!-- 4. GESTIÓN DE SOLICITUDES -->
+        <section class="box-container">
+          <div class="box-titlebar">
+            <h2>Gestión de solicitudes</h2>
+            <span class="box-badge">Balanceador</span>
+          </div>
+          <div class="box-body">
+            <p class="field-help">Despacha peticiones al balanceador para probar el algoritmo de distribución entre los servidores.</p>
+
+            <div class="control-actions">
+              <button id="btnEnviarSolicitud" class="btn-action primary">
+                <strong>&gt; Enviar solicitud</strong>
+              </button>
+              <button id="btnEnviar5Solicitudes" class="btn-action secondary">
+                Ráfaga de prueba (x5)
+              </button>
+            </div>
+
+            <!-- RESULTADO DE LA ÚLTIMA SOLICITUD -->
+            <div class="inspector-panel">
+              <div class="inspector-head">
+                <span class="label">Última solicitud procesada</span>
+                <span id="solicitudTimestamp" class="val-mono">Sin peticiones aún</span>
+              </div>
+              <div class="inspector-grid">
+                <div class="grid-item">
+                  <span class="item-label">Servidor Asignado:</span>
+                  <span id="respServidor" class="item-value accent">--</span>
+                </div>
+                <div class="grid-item">
+                  <span class="item-label">Puerto / Socket:</span>
+                  <span id="respPuerto" class="item-value val-mono">--</span>
+                </div>
+                <div class="grid-item full">
+                  <span class="item-label">Respuesta del Servidor:</span>
+                  <div id="respMensaje" class="response-box">Esperando envío de solicitud...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. ESTADÍSTICAS -->
+        <section class="box-container">
+          <div class="box-titlebar">
+            <h2>Estadísticas de distribución</h2>
+            <button id="btnActualizarEstadisticas" class="btn-tiny" title="Actualizar estadísticas">Refrescar</button>
+          </div>
+          <div class="box-body">
+            <p class="field-help">Volumen acumulado de solicitudes procesadas por cada nodo del clúster.</p>
+            <div id="estadisticasContenedor" class="stats-bars-list">
+              <div class="empty-notice">Sin datos de estadísticas aún.</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ==============================================
+           PANEL 2: INFRAESTRUCTURA Y MENSAJES DEL SISTEMA
+           ============================================== -->
+      <div class="column-panel">
+
+        <!-- 3. LISTADO DE SERVIDORES -->
+        <section class="box-container">
+          <div class="box-titlebar">
+            <h2>Listado de servidores</h2>
+            <button id="btnActualizarServidores" class="btn-tiny" title="Actualizar servidores">Actualizar lista</button>
+          </div>
+          <div class="box-body no-pad">
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Puerto</th>
+                    <th>Estado</th>
+                    <th class="th-center">Monitoreo</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaServidoresBody">
+                  <tr>
+                    <td colspan="4" class="empty-notice">Cargando servidores...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. MENSAJES DEL SISTEMA -->
+        <section class="box-container">
+          <div class="box-titlebar">
+            <h2>Mensajes del sistema</h2>
+            <button id="btnLimpiarMensajes" class="btn-tiny danger">Limpiar log</button>
+          </div>
+          <div class="box-body">
+            <p class="field-help">Registro continuo de eventos, respuestas del balanceador y reporte de fallos.</p>
+            <div id="mensajesConsola" class="terminal-log">
+              <div class="log-entry info">
+                <span class="log-time">[00:00:00]</span>
+                <span class="log-tag">INFO</span>
+                <span class="log-msg">Sistema inicializado. Conectando con los servicios...</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- PIE DE PÁGINA TÉCNICO -->
+  <footer class="system-footer">
+    <span>Universidad de Cundinamarca &bull; Facultad de Ingeniería &bull; Sistemas y Computación</span>
+    <span>CADI Redes y Comunicación &bull; Taller de Redes Masivas</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
